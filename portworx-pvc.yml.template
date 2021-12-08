@@ -1,0 +1,15 @@
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+   labels:
+      app: postgres
+   name: PVC
+   namespace: NAMESPACE
+   annotations:
+     volume.beta.kubernetes.io/storage-class: STORAGECLASS
+spec:
+   accessModes:
+     - ReadWriteOnce
+   resources:
+     requests:
+       storage: SIZE

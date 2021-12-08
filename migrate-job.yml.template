@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: migrate-job-script
+  namespace: NAMESPACE
+data:
+  entrypoint.sh: |-
+    #!/bin/sh
+    apk add rsync
+    rsync -a /migrate-old/ /migrate-new
+    df -h
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: migrate-job
+  namespace: NAMESPACE
+spec:
+  template:
+    spec:
+      terminationGracePeriodSeconds: 0
+      restartPolicy: Never
+      containers:
+      - name: migrate-job
+        image: alpine:3.15.0
+        command:
+        - /entrypoint.sh
+        volumeMounts:
+        - name: migrate-job-script
+          mountPath: /entrypoint.sh
+          readOnly: true
+          subPath: entrypoint.sh
+        - name: migrate-old
+          mountPath: /migrate-old
+        - name: migrate-new
+          mountPath: /migrate-new
+      volumes:
+      - name: migrate-old
+        persistentVolumeClaim:
+          claimName: PVC
+      - name: migrate-new
+        persistentVolumeClaim:
+          claimName: PVC-SUFFIX
+      - name: migrate-job-script
+        configMap:
+          defaultMode: 0700
+          name: migrate-job-script
