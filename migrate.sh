@@ -62,10 +62,6 @@ spec:
           name: migrate-job-script
 EOF
 
-# FIXME this is for testing
-kubectl scale deploy --all -n $NAMESPACE --replicas 0
-kubectl label pvc --all --overwrite -n $NAMESPACE $LABEL
-
 # Create Portworx StorageClass
 kubectl apply -f - <<EOF
 kind: StorageClass

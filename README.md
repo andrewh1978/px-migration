@@ -27,5 +27,8 @@ You can install Ondat (formerly known as StorageOS) and provision a PostgreSQL r
 ```
 sh install-ondat.sh
 kubectl apply -f ondat-postgres.yml
+kubectl scale deploy postgres -n postgres --replicas 0
+kubectl label pvc postgres-ondat -n postgres px/migrate=true
 sh migrate.sh
+kubectl scale deploy postgres -n postgres --replicas 1
 ```
