@@ -134,7 +134,7 @@ EOF
   kubectl apply -f $WORKDIR/pv-new/$oldpv.yml
   kubectl patch pv $oldpv --type=json -p="[{'op': 'remove', 'path': '/spec/claimRef'}]"
   # Apply old PVC
-  kubectl apply -f $WORKDIR/pvc/$pvc.yml
+  sed 's#volume.beta.kubernetes.io/storage-class: .*#volume.beta.kubernetes.io/storage-class: px-migrated#;s/storageClassName: .*/storageClassName: px-migrated/' $WORKDIR/pvc/$pvc.yml | kubectl apply -f -
 done
 
 # Clean up
