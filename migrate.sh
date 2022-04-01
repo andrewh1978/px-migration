@@ -3,7 +3,7 @@ LABEL=px/migrate=true
 
 WORKDIR=/var/tmp/px-migration
 rm -rf $WORKDIR
-mkdir -p $WORKDIR/{pvc,pv-old,pv-new}
+mkdir -p $WORKDIR/{pvc,pv-old,pv-new,logs}
 
 function pxctl {
   ns=$(kubectl get pod -lname=portworx -A -o jsonpath='{.items[].metadata.namespace}')
@@ -22,7 +22,7 @@ data:
   entrypoint.sh: |-
     #!/bin/sh
     apk add rsync
-    rsync -a /migrate-old/ /migrate-new
+    rsync -av /migrate-old/ /migrate-new
     df -h
 ---
 apiVersion: batch/v1
@@ -37,6 +37,8 @@ spec:
       restartPolicy: Never
       containers:
       - name: migrate-job
+        securityContext:
+          runAsUser: 0
         image: alpine:3.15.0
         command:
         - /entrypoint.sh
@@ -111,6 +113,7 @@ EOF
     sed s/PVC/$pvc/ |
     kubectl apply -f -
   kubectl wait --for=condition=complete --timeout=86400s job/migrate-job -n $NAMESPACE
+  kubectl logs --tail=-1 -l job-name=migrate-job -n $NAMESPACE >$WORKDIR/logs/$pvc
   kubectl delete job migrate-job -n $NAMESPACE
   # Delete but save old PVC
   oldpv=$(kubectl get pvc $pvc -n $NAMESPACE -o jsonpath='{.spec.volumeName}')
