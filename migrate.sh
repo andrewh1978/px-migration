@@ -106,7 +106,6 @@ spec:
      requests:
        storage: $size
 EOF
-  kubectl patch pvc px-migration-temp -n $NAMESPACE -p '{"spec":{"resources":{"requests":{"storage":"'$size'"}}}}'
   # Copy data from old PVC to temp PVC
   cat <<<"$jobtemplate" |
     sed s/NAMESPACE/$NAMESPACE/ |
