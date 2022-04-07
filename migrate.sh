@@ -65,6 +65,7 @@ spec:
 EOF
 
 # Create Portworx StorageClass
+kubectl delete sc portworx-sc >&/dev/null
 kubectl apply -f - <<EOF
 kind: StorageClass
 apiVersion: storage.k8s.io/v1
@@ -133,8 +134,7 @@ EOF
   kubectl apply -f $WORKDIR/pv-new/$oldpv.yml
   kubectl patch pv $oldpv --type=json -p="[{'op': 'remove', 'path': '/spec/claimRef'}]"
   # Apply old PVC
-  sed 's#volume.beta.kubernetes.io/storage-class: .*#volume.beta.kubernetes.io/storage-class: px-migrated#;s/storageClassName: .*/storageClassName: px-migrated/' $WORKDIR/pvc/$pvc.yml | kubectl apply -f -
+  sed 's#volume.beta.kubernetes.io/storage-class: .*#volume.beta.kubernetes.io/storage-class: portworx-sc#;s/storageClassName: .*/storageClassName: portworx-sc/' $WORKDIR/pvc/$pvc.yml | kubectl apply -f -
+  # Remove label
+  kubectl label pvc $pvc -n $NAMESPACE $(echo $LABEL | cut -f 1 -d =)-
 done
-
-# Clean up
-kubectl delete sc portworx-sc
