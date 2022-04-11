@@ -74,6 +74,7 @@ metadata:
 provisioner: kubernetes.io/portworx-volume
 parameters:
   repl: "1"
+  sharedv4: "true"
 allowVolumeExpansion: true
 reclaimPolicy: Retain
 EOF
@@ -129,6 +130,7 @@ EOF
   # Rename Portworx volume
   pxctl volume clone --name $oldpv $newpv
   pxctl volume delete $newpv -f
+  [ "$mode" = ReadWriteOnce ] && pxctl volume update --sharedv4 off $oldpv
   # Rename temp PV to old PV
   kubectl get pv $newpv -o yaml | sed "s/^  name: .*/  name: $oldpv/;s/^    volumeID.*/    volumeID: $oldpv/" >$WORKDIR/pv-new/$oldpv.yml
   kubectl delete pv $newpv
