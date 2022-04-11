@@ -90,8 +90,9 @@ for pv in $PVs; do
 done
 
 for pvc in $PVCs; do
-  # Get PVC size
+  # Get PVC parameters
   size=$(kubectl get pvc $pvc -n $NAMESPACE -o jsonpath='{.spec.resources.requests.storage}')
+  mode=$(kubectl get pvc $pvc -n $NAMESPACE -o jsonpath='{.spec.accessModes[0]}')
   # Create temp PVC
   kubectl apply -n $NAMESPACE -f - <<EOF
 kind: PersistentVolumeClaim
@@ -102,7 +103,7 @@ metadata:
      volume.beta.kubernetes.io/storage-class: portworx-sc
 spec:
    accessModes:
-     - ReadWriteOnce
+     - $mode
    resources:
      requests:
        storage: $size
