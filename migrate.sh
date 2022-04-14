@@ -33,6 +33,7 @@ metadata:
 spec:
   template:
     spec:
+      schedulerName: stork
       terminationGracePeriodSeconds: 0
       restartPolicy: Never
       containers:
@@ -74,7 +75,6 @@ metadata:
 provisioner: kubernetes.io/portworx-volume
 parameters:
   repl: "1"
-  sharedv4: "true"
 allowVolumeExpansion: true
 reclaimPolicy: Retain
 EOF
@@ -90,7 +90,10 @@ for pv in $PVs; do
   kubectl patch pv $pv -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
 done
 
+count=0
 for pvc in $PVCs; do
+  count=$[$count+1]
+  echo "Starting migration for PVC $pvc ($count/$(echo $PVCs | wc -l))"
   # Get PVC parameters
   size=$(kubectl get pvc $pvc -n $NAMESPACE -o jsonpath='{.spec.resources.requests.storage}')
   mode=$(kubectl get pvc $pvc -n $NAMESPACE -o jsonpath='{.spec.accessModes[0]}')
@@ -104,7 +107,7 @@ metadata:
      volume.beta.kubernetes.io/storage-class: portworx-sc
 spec:
    accessModes:
-     - $mode
+     - ReadWriteOnce
    resources:
      requests:
        storage: $size
@@ -130,12 +133,13 @@ EOF
   # Rename Portworx volume
   pxctl volume clone --name $oldpv $newpv
   pxctl volume delete $newpv -f
-  [ "$mode" = ReadWriteOnce ] && pxctl volume update --sharedv4 off $oldpv
+  [ "$mode" = ReadWriteMany ] && pxctl volume update --sharedv4 on $oldpv
   # Rename temp PV to old PV
   kubectl get pv $newpv -o yaml | sed "s/^  name: .*/  name: $oldpv/;s/^    volumeID.*/    volumeID: $oldpv/" >$WORKDIR/pv-new/$oldpv.yml
   kubectl delete pv $newpv
   kubectl apply -f $WORKDIR/pv-new/$oldpv.yml
   kubectl patch pv $oldpv --type=json -p="[{'op': 'remove', 'path': '/spec/claimRef'}]"
+  kubectl patch pv $oldpv -p='{"spec":{"accessModes":["'$mode'"]}}'
   # Apply old PVC
   sed 's#volume.beta.kubernetes.io/storage-class: .*#volume.beta.kubernetes.io/storage-class: portworx-sc#;s/storageClassName: .*/storageClassName: portworx-sc/' $WORKDIR/pvc/$pvc.yml | kubectl apply -f -
   # Remove label
