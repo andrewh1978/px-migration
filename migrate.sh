@@ -39,7 +39,7 @@ spec:
       containers:
       - name: migrate-job
         securityContext:
-	  allowPrivilegeEscalation: true
+          allowPrivilegeEscalation: true
           runAsUser: 0
         image: alpine:3.15.0
         command:
